@@ -1,0 +1,15 @@
+/ordering-app-backend
+ ├── /config        # Database configuration
+ ├── /models        # MySQL models (users, items, orders)
+ ├── /routes        # Express API routes
+ ├── /controllers   # Business logic for each route
+ ├── /middleware    # JWT authentication middleware
+ ├── .env           # Environment variables
+ ├── server.js      # Main server file
+ ├── package.json   # Dependencies
+
+
+npm install express mysql body-parser jsonwebtoken bcryptjs dotenv
+
+node server.js
+

@@ -1,0 +1,247 @@
+### Postman Steps for All Routes (Ordering App Backend)
+
+#### Authentication Routes (/api/auth/)
+---
+### 1. Register User  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/auth/register`  
+**Headers:**  
+   - `Content-Type: application/json`  
+**Body (JSON):**  
+```json
+{
+  "name": "John Doe",
+  "email": "johndoe@example.com",
+  "password": "password123"
+}
+```  
+**Expected Response:**  
+```json
+{
+  "message": "User registered successfully"
+}
+```
+
+---
+### 2. Login User  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/auth/login`  
+**Headers:**  
+   - `Content-Type: application/json`  
+**Body (JSON):**  
+```json
+{
+  "email": "johndoe@example.com",
+  "password": "password123"
+}
+```  
+**Expected Response:**  
+```json
+{
+  "token": "your_jwt_token_here",
+  "message": "Login successful"
+}
+```
+⚠️ **Copy the token from the response for authenticated requests below!**  
+
+---
+### 3. Logout User  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/auth/logout`  
+**Headers:**  
+   - `Content-Type: application/json`  
+**Expected Response:**  
+```json
+{
+  "message": "Logout successful, please remove the token from your client"
+}
+```
+---
+### Item Routes (/api/items/)
+🔑 Requires Authentication! Add `Authorization: Bearer your_jwt_token_here` header.
+
+---
+### 4. Get All Items (Public Route)  
+**Method:** GET  
+**URL:** `http://localhost:5000/api/items/`  
+**Expected Response:**  
+```json
+[
+  {
+    "id": 1,
+    "name": "Kungumam",
+    "unit": "kg",
+    "price": 200,
+    "category": "Pooja Items",
+    "function": [
+      {
+        "id": 1,
+        "name": "Temple Festival"
+      }
+    ]
+  }
+]
+```
+
+---
+### 5. Add a New Item  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/items/`  
+**Headers:**  
+   - `Content-Type: application/json`  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Body (JSON):**  
+```json
+{
+  "name": "Manjal",
+  "category_id": 2,
+  "unit": "kg",
+  "price": 150,
+  "function_ids": [1, 2]
+}
+```  
+**Expected Response:**  
+```json
+{
+  "message": "Item added successfully",
+  "id": 2
+}
+```
+
+---
+### 6. Delete an Item  
+**Method:** DELETE  
+**URL:** `http://localhost:5000/api/items/2`  
+**Headers:**  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Expected Response:**  
+```json
+{
+  "message": "Item deleted successfully"
+}
+```
+
+---
+### Category Routes (/api/categories/)
+🔑 Requires Authentication!  
+
+---
+### 7. Get All Categories  
+**Method:** GET  
+**URL:** `http://localhost:5000/api/categories/`  
+**Expected Response:**  
+```json
+[
+  {
+    "id": 1,
+    "name": "Pooja Items"
+  },
+  {
+    "id": 2,
+    "name": "Temple Essentials"
+  }
+]
+```
+
+---
+### 8. Add a New Category  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/categories/`  
+**Headers:**  
+   - `Content-Type: application/json`  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Body (JSON):**  
+```json
+{
+  "name": "New Category"
+}
+```  
+**Expected Response:**  
+```json
+{
+  "message": "Category added successfully",
+  "id": 3
+}
+```
+
+---
+### 9. Delete a Category  
+**Method:** DELETE  
+**URL:** `http://localhost:5000/api/categories/3`  
+**Headers:**  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Expected Response:**  
+```json
+{
+  "message": "Category deleted successfully"
+}
+```
+
+---
+### Function Routes (/api/functions/)
+🔑 Requires Authentication!  
+
+---
+### 10. Get All Functions  
+**Method:** GET  
+**URL:** `http://localhost:5000/api/functions/`  
+**Expected Response:**  
+```json
+[
+  {
+    "id": 1,
+    "name": "Temple Festival"
+  },
+  {
+    "id": 2,
+    "name": "Daily Pooja"
+  }
+]
+```
+
+---
+### 11. Add a New Function  
+**Method:** POST  
+**URL:** `http://localhost:5000/api/functions/`  
+**Headers:**  
+   - `Content-Type: application/json`  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Body (JSON):**  
+```json
+{
+  "name": "New Function"
+}
+```  
+**Expected Response:**  
+```json
+{
+  "message": "Function added successfully",
+  "id": 3
+}
+```
+
+---
+### 12. Delete a Function  
+**Method:** DELETE  
+**URL:** `http://localhost:5000/api/functions/3`  
+**Headers:**  
+   - `Authorization: Bearer your_jwt_token_here`  
+**Expected Response:**  
+```json
+{
+  "message": "Function deleted successfully"
+}
+```
+
+---
+### Notes
+- Use `Authorization: Bearer your_jwt_token_here` in headers for all protected routes.
+- Run the backend server using:
+  ```bash
+  npm start
+  ```
+- Check your `.env` file for `JWT_SECRET`, `DB_HOST`, `DB_USER`, etc.
+- Ensure MySQL database is running and tables exist.
+
+🚀 Now you can test all API endpoints in Postman easily!
+
