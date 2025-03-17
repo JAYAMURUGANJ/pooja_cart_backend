@@ -159,6 +159,41 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`) VALUES
 (1, 'jai', 'jai@gmail.com', '$2b$10$Arnoj3f.L16.R6OivTDzNOWbWEGYnBPK6WYYg24ClllXaB.yLcr7O', '2025-03-09 14:14:38');
 
 --
+
+
+--
+-- Table structure for table `unit_master`
+--
+
+CREATE TABLE unit_master (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,  -- Full name of the unit (English)
+    ta_name VARCHAR(50) NOT NULL UNIQUE,  -- Tamil name of the unit
+    abbreviation VARCHAR(10) NOT NULL UNIQUE,  -- English short form (kg, ml, etc.)
+    ta_abbreviation VARCHAR(10) NOT NULL UNIQUE,  -- Tamil short form
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO unit_master (name, ta_name, abbreviation, ta_abbreviation) VALUES
+('Kilogram', 'கிலோ கிராம்', 'kg', 'கி.கி'),
+('Gram', 'கிராம்', 'g', 'கி'),
+('Liter', 'லிட்டர்', 'L', 'லி'),
+('Milliliter', 'மில்லி லிட்டர்', 'ml', 'மி.லி'),
+('Packet', 'பொதி', 'pkt', 'பொ.'),
+('Dozen', 'டஜன்', 'dz', 'டஜ.'),
+('Piece', 'துண்டு', 'pc', 'து.'),
+('Box', 'பெட்டி', 'bx', 'பெ.'),
+('Bundle', 'கட்டு', 'bndl', 'க.');
+
+--
+
+
+
 -- Indexes for dumped tables
 --
 

@@ -12,15 +12,15 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import Routes
-const userRoutes = require("./routes/userRoutes"); // ✅ Updated
-const itemRoutes = require("./routes/itemRoutes");
-const functionRoutes = require("./routes/functionRoutes");
-const categoryRoutes = require("./routes/categoryRoutes");
+const userRoutes = require("./src/routes/userRoutes"); // ✅ Updated
+const itemRoutes = require("./src/routes/itemRoutes");
+const functionRoutes = require("./src/routes/functionRoutes");
+const categoryRoutes = require("./src/routes/categoryRoutes");
 
-app.use("/api/users", userRoutes); // ✅ Updated path
-app.use("/api/items", itemRoutes);
-app.use("/api/functions", functionRoutes);
-app.use("/api/categories", categoryRoutes);
+app.use("/users", userRoutes); // ✅ Updated path
+app.use("/items", itemRoutes);
+app.use("/functions", functionRoutes);
+app.use("/categories", categoryRoutes);
 
 // Root Route
 app.get("/", (req, res) => {
