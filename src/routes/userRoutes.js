@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware"); // Import middleware
-const controller = require("../../src/controllers/user_controller");
+const controller = require("../controllers/userController");
 require("dotenv").config();
 
 const router = express.Router();

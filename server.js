@@ -16,11 +16,15 @@ const userRoutes = require("./src/routes/userRoutes"); // ✅ Updated
 const itemRoutes = require("./src/routes/itemRoutes");
 const functionRoutes = require("./src/routes/functionRoutes");
 const categoryRoutes = require("./src/routes/categoryRoutes");
+const unitRoutes = require("./src/routes/unitRoutes");
+const productsRoutes = require("./src/routes/productRoutes");
 
 app.use("/users", userRoutes); // ✅ Updated path
 app.use("/items", itemRoutes);
 app.use("/functions", functionRoutes);
 app.use("/categories", categoryRoutes);
+app.use("/units", unitRoutes);
+app.use("/products", productsRoutes);
 
 // Root Route
 app.get("/", (req, res) => {

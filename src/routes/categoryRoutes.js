@@ -1,17 +1,13 @@
 const express = require("express");
 const db = require("../../config/db");
 const authMiddleware = require("../middleware/authMiddleware"); // Import authentication middleware
+const controller = require("../controllers/categoryController");
 
 const router = express.Router();
 
 // ✅ Get All Categories (Public)
-router.get("/", (req, res) => {
-    const sql = "SELECT * FROM categories";
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
-});
+router.get("/",authMiddleware, controller.getAllCategories);
+router.get("/:id",authMiddleware, controller.getCategoryById);
 
 // ✅ Add a New Category (Protected)
 router.post("/", authMiddleware, (req, res) => {
