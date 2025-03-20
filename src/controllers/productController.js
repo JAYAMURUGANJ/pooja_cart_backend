@@ -97,8 +97,12 @@ const createProduct = asyncHandler(async (req, res) => {
     const { category_id, is_active = true, translations = [], units = [], images = [] } = req.body;
 
     if (!category_id) throwError("Category ID is required", 400);
+    if (translations.length === 0) throwError("At least one name is required", 400);
     if (units.length === 0) throwError("At least one unit with pricing information is required", 400);
 
+    for (const translation of translations) {
+        if (!translation.lang || !translation.name) throwError("Name and language is required for each product", 400);
+    }
     for (const unit of units) {
         if (!unit.selling_price || !unit.mrp) throwError("MRP and selling price are required for each unit", 400);
         if (unit.selling_price > unit.mrp) throwError("Selling price cannot be greater than MRP", 400);
@@ -107,7 +111,10 @@ const createProduct = asyncHandler(async (req, res) => {
     const result = await queryAsync(queries.insertProduct, [category_id, is_active]);
     const productId = result.insertId;
 
+
+
     for (const { lang, name, description = '' } of translations) {
+       
         await queryAsync(queries.insertProductTranslation, [productId, lang, name, description]);
     }
 

@@ -13,7 +13,7 @@ const failureResponse = (res, { message = "Something went wrong", statusCode = 5
         message = "Duplicate entry. This record already exists.";
     }
 
-    res.status(statusCode).json(new responseModel(statusCode, "failure", [], message));
+    res.status(statusCode).json(new responseModel(statusCode, false,[], message));
 };
 
 module.exports = { successResponse, failureResponse };

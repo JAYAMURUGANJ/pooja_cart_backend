@@ -67,7 +67,7 @@ const createCategory = asyncHandler(async (req, res) => {
     }
 
     successResponse(res, {
-        data: { id: categoryId, translations },
+        data: { id: categoryId, translations,unit_ids},
         message: "Category created successfully",
         statusCode: 201
     });
@@ -76,6 +76,7 @@ const createCategory = asyncHandler(async (req, res) => {
 // Update a Category
 const updateCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { lang = "en" } = req.query; // Default language is English
     const { translations, unit_ids } = req.body;
 
     // Verify category exists
@@ -95,8 +96,16 @@ const updateCategory = asyncHandler(async (req, res) => {
             await queryAsync(queries.assignUnitsToCategory, [id, unitId]);
         }
     }
+   
+    // Get updated Category
+    const updatedCategory = await getCategoryWithTranslation(id, lang);
+    if (!updatedCategory) throwError("Category not found", 404);
 
-    successResponse(res, { message: "Category updated successfully" });
+    // Fetch associated units
+    const units = await queryAsync(queries.getUnitsByCategoryId, [lang, id]);
+
+    successResponse(res, {data: { ...updatedCategory, units },
+         message: "Category updated successfully" });
 });
 
 // Delete a Category
@@ -117,7 +126,8 @@ const deleteCategory = asyncHandler(async (req, res) => {
     const result = await queryAsync(queries.deleteCategory, [id]);
     if (result.affectedRows === 0) throwError("Category not found", 404);
 
-    successResponse(res, { message: "Category deleted successfully" });
+    successResponse(res,{ data: { id : id },
+         message: "Category deleted successfully" });
 });
 
 module.exports = { 
