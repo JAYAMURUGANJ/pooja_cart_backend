@@ -5,8 +5,8 @@ require("dotenv").config();
 
 const router = express.Router();
 
-router.get("/",authMiddleware, controller.getAllUnits);
-router.get("/:id",authMiddleware,  controller.getUnitById);
+router.get("/", controller.getAllUnits);
+router.get("/:id",  controller.getUnitById);
 router.post("/",authMiddleware, controller.createUnit);
 router.put("/:id",authMiddleware,  controller.updateUnit);
 router.delete("/:id",authMiddleware,  controller.deleteUnit);
