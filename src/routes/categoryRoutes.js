@@ -6,8 +6,8 @@ const controller = require("../controllers/categoryController");
 const router = express.Router();
 
 // ✅ Get All Categories (Public)
-router.get("/",authMiddleware, controller.getAllCategories);
-router.get("/:id",authMiddleware, controller.getCategoryById);
+router.get("/", controller.getAllCategories);
+router.get("/:id", controller.getCategoryById);
 router.post('/',authMiddleware, controller.createCategory);
 router.put('/:id',authMiddleware, controller.updateCategory);
 router.delete('/:id',authMiddleware, controller.deleteCategory);
