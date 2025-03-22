@@ -11,7 +11,7 @@ INSERT INTO products (category_id, is_active) VALUES
 (5, TRUE);
 
 -- Insert Product Translations (Tamil & English)
-INSERT INTO product_translations (product_id, lang, name, description) VALUES 
+INSERT INTO product_translations (product_id, language_code, name, description) VALUES 
 (1, 'ta', 'நல்லெண்ணெய்', 'உயர்தர நல்லெண்ணெய்'),
 (1, 'en', 'Sesame Oil', 'High-quality sesame oil'),
 (2, 'ta', 'கடலை எண்ணெய்', 'உயர்தர கடலை எண்ணெய்'),
