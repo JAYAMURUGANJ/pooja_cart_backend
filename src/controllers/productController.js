@@ -27,18 +27,6 @@ const getAllProducts = asyncHandler(async (req, res) => {
         for (const product of products) {
             product.units = await queryAsync(queries.getProductUnits, [lang, product.id]);
             product.images = await queryAsync(queries.getPrimaryProductImage, [product.id]);
-
-            const defaultUnit = product.units.find(unit => unit.is_default);
-            if (defaultUnit) {
-                product.mrp = defaultUnit.mrp;
-                product.selling_price = defaultUnit.selling_price;
-            } else if (product.units.length > 0) {
-                product.mrp = product.units[0].mrp;
-                product.selling_price = product.units[0].selling_price;
-            } else {
-                product.mrp = 0;
-                product.selling_price = 0;
-            }
         }
 
         successResponse(res, {
