@@ -6,149 +6,120 @@ const queryAsync = require("../utils/dbQuery");
 const { throwError } = require("../utils/errorHandler");
 
 // Create a new order
-const createOrder = asyncHandler(async (req, res) => {
-    const { 
-        user_id, 
-        address_id, 
-        payment_method = 'COD',
-        items = [], 
-        special_instructions = '' 
+const placeOrder = asyncHandler(async (req, res) => {
+    const {
+        shipping_details,
+        order_items,
+        payment_details,
+        coupon_code = null,
+        order_notes = ''
     } = req.body;
 
-    // Validation
-    if (!user_id) throwError("User ID is required", 400);
-    if (!address_id) throwError("Address ID is required", 400);
-    if (items.length === 0) throwError("Order must contain at least one item", 400);
+    if (!shipping_details || !order_items || order_items.length === 0 || !payment_details) {
+        throwError("Invalid order data", 400);
+    }
 
     // Start transaction
-    const connection = await queryAsync('START TRANSACTION');
-    
+    await queryAsync('START TRANSACTION');
+
     try {
-        // Calculate order totals
-        let subtotal = 0;
+        let sub_total = 0;
         let total_mrp = 0;
         let total_discount = 0;
-        
-        // First check if all products and their units exist and are in stock
-        for (const item of items) {
-            const { product_id, unit_id, quantity } = item;
-            
-            if (!product_id || !unit_id || !quantity) {
+
+        for (const item of order_items) {
+            const { product_id, unit_id, quantity, selling_price, mrp } = item;
+            if (!product_id || !unit_id || !quantity || !selling_price || !mrp) {
                 await queryAsync('ROLLBACK');
-                throwError("Product ID, unit ID, and quantity are required for each item", 400);
+                throwError("Missing order item details", 400);
             }
-            
-            // Check if product exists and is active
+
             const product = await queryAsync(productQueries.getProductById, ["en", "en", product_id]);
-            if (product.length === 0 || !product[0].is_active) {
+            if (!product.length || !product[0].is_active) {
                 await queryAsync('ROLLBACK');
-                throwError(`Product with ID ${product_id} not found or is inactive`, 400);
+                throwError(`Product ID ${product_id} not found or inactive`, 400);
             }
-            
-            // Check if unit exists for this product and has sufficient stock
+
             const units = await queryAsync(productQueries.getProductUnits, ["en", product_id]);
             const unit = units.find(u => u.unit_id === unit_id);
-            
-            if (!unit) {
+            if (!unit || unit.in_stock < quantity) {
                 await queryAsync('ROLLBACK');
-                throwError(`Unit with ID ${unit_id} not found for product ${product_id}`, 400);
+                throwError(`Insufficient stock for Product ID ${product_id}`, 400);
             }
-            
-            if (unit.in_stock < quantity) {
-                await queryAsync('ROLLBACK');
-                throwError(`Insufficient stock for product ${product_id}. Available: ${unit.in_stock}, Requested: ${quantity}`, 400);
-            }
-            
-            // Calculate item total
-            const itemMrp = unit.mrp * quantity;
-            const itemPrice = unit.selling_price * quantity;
-            
-            total_mrp += itemMrp;
-            subtotal += itemPrice;
-            total_discount += (itemMrp - itemPrice);
+
+            sub_total += selling_price * quantity;
+            total_mrp += mrp * quantity;
+            total_discount += (mrp - selling_price) * quantity;
         }
-        
-        // Apply any delivery fees, taxes, etc.
-        // For now, keeping it simple
-        const delivery_fee = 0; // Could be calculated based on address, order value, etc.
-        const taxes = 0; // Could be calculated based on applicable tax rates
-        const grand_total = subtotal + delivery_fee + taxes;
-        
-        // Create order
+
+        const shipping_cost = 7.99;
+        const tax = sub_total * 0.0925;
+        const total = sub_total + shipping_cost + tax;
+
         const orderResult = await queryAsync(queries.createOrder, [
-            user_id, 
-            address_id,
-            subtotal,
-            total_mrp,
+            shipping_details.name,
+            shipping_details.mobile_no,
+            shipping_details.shipping_address,
+            shipping_details.shipping_method,
+            sub_total,
             total_discount,
-            delivery_fee,
-            taxes,
-            grand_total,
-            'PENDING', // Default status
-            payment_method,
-            special_instructions
+            shipping_cost,
+            tax,
+            total,
+            'pending',
+            payment_details.payment_method,
+            payment_details.transaction_id,
+            coupon_code,
+            order_notes
         ]);
-        
+
         const orderId = orderResult.insertId;
-        
-        // Add order items
-        for (const item of items) {
-            const { product_id, unit_id, quantity } = item;
-            
-            // Get current pricing for the product unit
-            const units = await queryAsync(productQueries.getProductUnits, ["en", product_id]);
-            const unit = units.find(u => u.unit_id === unit_id);
-            
-            const unitPrice = unit.selling_price;
-            const unitMrp = unit.mrp;
-            const totalPrice = unitPrice * quantity;
-            const totalMrp = unitMrp * quantity;
-            const itemDiscount = totalMrp - totalPrice;
-            
-            // Add order item
+
+        for (const item of order_items) {
             await queryAsync(queries.addOrderItem, [
                 orderId,
-                product_id,
-                unit_id,
-                quantity,
-                unitPrice,
-                unitMrp,
-                totalPrice,
-                totalMrp,
-                itemDiscount
+                item.product_id,
+                item.unit_id,
+                item.quantity,
+                item.selling_price,
+                item.mrp
             ]);
-            
-            // Update inventory (reduce stock)
-            await queryAsync(queries.updateProductStock, [quantity, product_id, unit_id]);
+            await queryAsync(queries.updateProductStock, [item.quantity, item.product_id, item.unit_id]);
         }
-        
-        // Add order status history
-        await queryAsync(queries.addOrderStatusHistory, [orderId, 'PENDING', 'Order placed']);
-        
-        // Commit transaction
+
+        await queryAsync(queries.addOrderStatusHistory, [orderId, 'pending', 'Order placed']);
+
         await queryAsync('COMMIT');
-        
-        successResponse(res, { 
-            data: { 
-                order_id: orderId,
-                order_total: grand_total,
-                status: 'PENDING'
-            }, 
-            message: "Order placed successfully", 
-            statusCode: 201 
+
+        successResponse(res, {
+            data: {
+                order_id: `ORD-${orderId}`,
+                order_date: new Date().toISOString(),
+                order_status: "pending",
+                shipping_details: {
+                    ...shipping_details,
+                    email: "john.doe@example.com" // Placeholder email
+                },
+                order_items,
+                sub_total,
+                discount: total_discount,
+                shipping_cost,
+                tax,
+                total,
+                payment_details,
+                coupon_code,
+                order_notes
+            },
+            message: "Order placed successfully",
+            statusCode: 201
         });
-        
     } catch (error) {
-        // Rollback transaction in case of error
         await queryAsync('ROLLBACK');
-        console.error("Order creation error:", error);
-        if (!error.statusCode) {
-            error.statusCode = 500;
-            error.message = "Failed to create order. " + error.message;
-        }
-        throw error;
+        console.error("Order placement error:", error);
+        throwError(error.message || "Failed to place order", error.statusCode || 500);
     }
 });
+
 
 // Get all orders for a user
 const getUserOrders = asyncHandler(async (req, res) => {
@@ -281,7 +252,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-    createOrder,
+    placeOrder,
     getUserOrders,
     getOrderById,
     updateOrderStatus
