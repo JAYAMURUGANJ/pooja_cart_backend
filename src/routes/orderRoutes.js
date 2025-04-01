@@ -7,8 +7,8 @@ const router = express.Router();
 
 // Order routes
 router.post('/place_order', controller.placeOrder);
-router.get('/user/:user_id', authMiddleware, controller.getUserOrders);
-router.get('/:id', authMiddleware, controller.getOrderById);
-router.patch('/:id/status', authMiddleware, controller.updateOrderStatus);
+// router.get('/user/:user_id', authMiddleware, controller.getUserOrders);
+// router.get('/:id', authMiddleware, controller.getOrderById);
+// router.patch('/:id/status', authMiddleware, controller.updateOrderStatus);
 
 module.exports = router;

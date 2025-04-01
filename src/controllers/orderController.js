@@ -5,18 +5,30 @@ const asyncHandler = require("../utils/asyncHandler");
 const queryAsync = require("../utils/dbQuery");
 const { throwError } = require("../utils/errorHandler");
 
-// Create a new order
 const placeOrder = asyncHandler(async (req, res) => {
+     // Extract the nested place_order_request first
+     const { place_order_request } = req.body;
+    
+     if (!place_order_request) {
+         throwError("Missing place_order_request in request body", 400);
+     }
+    
     const {
         shipping_details,
         order_items,
         payment_details,
         coupon_code = null,
-        order_notes = ''
-    } = req.body;
+        order_notes = '',
+        language_code = 'en' // Default language is English
+    } = place_order_request;
 
     if (!shipping_details || !order_items || order_items.length === 0 || !payment_details) {
         throwError("Invalid order data", 400);
+    }
+
+    // Validate language code
+    if (!['en', 'ta'].includes(language_code)) {
+        throwError("Invalid language code. Supported languages are 'en' and 'ta'", 400);
     }
 
     // Start transaction
@@ -24,9 +36,9 @@ const placeOrder = asyncHandler(async (req, res) => {
 
     try {
         let sub_total = 0;
-        let total_mrp = 0;
         let total_discount = 0;
 
+        // Validate all products and calculate totals
         for (const item of order_items) {
             const { product_id, unit_id, quantity, selling_price, mrp } = item;
             if (!product_id || !unit_id || !quantity || !selling_price || !mrp) {
@@ -34,31 +46,45 @@ const placeOrder = asyncHandler(async (req, res) => {
                 throwError("Missing order item details", 400);
             }
 
-            const product = await queryAsync(productQueries.getProductById, ["en", "en", product_id]);
+            // Check if product exists and is active
+            const product = await queryAsync(queries.getProductById, [language_code, language_code, product_id]);
             if (!product.length || !product[0].is_active) {
                 await queryAsync('ROLLBACK');
                 throwError(`Product ID ${product_id} not found or inactive`, 400);
             }
-
-            const units = await queryAsync(productQueries.getProductUnits, ["en", product_id]);
+          
+            // Check if unit exists and has enough stock
+            const units = await queryAsync(queries.getProductUnits, [language_code, product_id]);
             const unit = units.find(u => u.unit_id === unit_id);
-            if (!unit || unit.in_stock < quantity) {
+            if (!unit) {
                 await queryAsync('ROLLBACK');
-                throwError(`Insufficient stock for Product ID ${product_id}`, 400);
+                throwError(`Unit ID ${unit_id} not found for Product ID ${product_id}`, 400);
+            }
+            
+            if (unit.in_stock < quantity) {
+                await queryAsync('ROLLBACK');
+                throwError(`Insufficient stock for Product ID ${product_id}. Available: ${unit.in_stock}, Requested: ${quantity}`, 400);
             }
 
-            sub_total += selling_price * quantity;
-            total_mrp += mrp * quantity;
-            total_discount += (mrp - selling_price) * quantity;
+            // Calculate totals
+            const itemSubTotal = selling_price * quantity;
+            const itemDiscount = (mrp - selling_price) * quantity;
+            
+            sub_total += itemSubTotal;
+            total_discount += itemDiscount;
         }
 
+        // Calculate order totals
         const shipping_cost = 7.99;
         const tax = sub_total * 0.0925;
-        const total = sub_total + shipping_cost + tax;
+        const total = sub_total + shipping_cost + tax - total_discount;
 
+        // Create the order
         const orderResult = await queryAsync(queries.createOrder, [
+            null, // user_id (null for guest orders)
             shipping_details.name,
             shipping_details.mobile_no,
+            shipping_details.email || null,
             shipping_details.shipping_address,
             shipping_details.shipping_method,
             sub_total,
@@ -68,48 +94,74 @@ const placeOrder = asyncHandler(async (req, res) => {
             total,
             'pending',
             payment_details.payment_method,
-            payment_details.transaction_id,
+            payment_details.transaction_id || null,
             coupon_code,
             order_notes
         ]);
 
         const orderId = orderResult.insertId;
 
+        // Add all order items and update inventory
         for (const item of order_items) {
-            await queryAsync(queries.addOrderItem, [
+            // Add order item (without product name as it will be in translations)
+            const itemSubTotal = item.selling_price * item.quantity;
+            const itemDiscount = (item.mrp - item.selling_price) * item.quantity;
+            
+            const orderItemResult = await queryAsync(queries.addOrderItem, [
                 orderId,
                 item.product_id,
                 item.unit_id,
                 item.quantity,
                 item.selling_price,
-                item.mrp
+                item.mrp,
+                itemSubTotal,
+                itemDiscount
             ]);
-            await queryAsync(queries.updateProductStock, [item.quantity, item.product_id, item.unit_id]);
+            
+            const orderItemId = orderItemResult.insertId;
+            
+            // Get product translations for both languages and store them
+            const languages = ['en', 'ta'];
+            for (const lang of languages) {
+                const productTranslation = await queryAsync(queries.getProductTranslation, [
+                    lang, 
+                    item.product_id
+                ]);
+                
+                if (productTranslation.length > 0) {
+                    await queryAsync(queries.addOrderedProductTranslation, [
+                        orderItemId,
+                        lang,
+                        productTranslation[0].name,
+                        productTranslation[0].description || null
+                    ]);
+                }
+            }
+            
+            // Update product stock
+            await queryAsync(queries.updateProductStock, [
+                item.quantity, 
+                item.product_id, 
+                item.unit_id
+            ]);
         }
 
-        await queryAsync(queries.addOrderStatusHistory, [orderId, 'pending', 'Order placed']);
+        // Record order status history
+        await queryAsync(queries.addOrderStatusHistory, [
+            orderId, 
+            'pending', 
+            'Order placed successfully'
+        ]);
 
+        // Commit the transaction
         await queryAsync('COMMIT');
 
+        // Get order details with translations based on requested language
+        const orderDetails = await getOrderDetails(orderId, language_code);
+
+        // Return success response
         successResponse(res, {
-            data: {
-                order_id: `ORD-${orderId}`,
-                order_date: new Date().toISOString(),
-                order_status: "pending",
-                shipping_details: {
-                    ...shipping_details,
-                    email: "john.doe@example.com" // Placeholder email
-                },
-                order_items,
-                sub_total,
-                discount: total_discount,
-                shipping_cost,
-                tax,
-                total,
-                payment_details,
-                coupon_code,
-                order_notes
-            },
+            data: orderDetails,
             message: "Order placed successfully",
             statusCode: 201
         });
@@ -120,140 +172,115 @@ const placeOrder = asyncHandler(async (req, res) => {
     }
 });
 
-
-// Get all orders for a user
-const getUserOrders = asyncHandler(async (req, res) => {
-    const { user_id } = req.params;
-    const { page = 1, limit = 10, status, lang = "en" } = req.query;
+// Helper function to get complete order details with translations
+const getOrderDetails = async (orderId, languageCode = 'en') => {
+    // Get basic order information
+    const [orderInfo] = await queryAsync(queries.getOrderById, [orderId]);
     
-    // Ensure limit and offset are numbers
-    const parsedLimit = parseInt(limit, 10);
-    const parsedOffset = (parseInt(page, 10) - 1) * parsedLimit;
-    
-    try {
-        let orders, totalOrders;
-        
-        if (status) {
-            orders = await queryAsync(queries.getUserOrdersByStatusPaginated, [user_id, status, parsedLimit, parsedOffset]);
-            totalOrders = await queryAsync(queries.getUserOrdersCountByStatus, [user_id, status]);
-        } else {
-            orders = await queryAsync(queries.getUserOrdersPaginated, [user_id, parsedLimit, parsedOffset]);
-            totalOrders = await queryAsync(queries.getUserOrdersCount, [user_id]);
-        }
-
-        // Fetch product details for each order
-        for (const order of orders) {
-            const products = await queryAsync(queries.getProductsByOrderId, [lang, order.id]);
-            order.products = products; // Add products array to each order
-        }
-        
-        successResponse(res, {
-            data: orders,
-            message: "Orders retrieved successfully",
-            pagination: {
-                total: totalOrders[0]?.count || 0,
-                page: Number(page),
-                limit: parsedLimit,
-                totalPages: Math.ceil((totalOrders[0]?.count || 0) / parsedLimit),
-            },
-        });
-    } catch (error) {
-        console.error("Database Query Error:", error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
-    }
-});
-
-
-// Get order details by ID
-const getOrderById = asyncHandler(async (req, res) => {
-    const { id } = req.params; // Get order_id from params
-    const { lang = "en" } = req.query;
-
-    // Fetch order details
-    const orders = await queryAsync(queries.getOrderById, [id]);
-
-    if (orders.length === 0) {
+    if (!orderInfo) {
         throwError("Order not found", 404);
     }
-
-    const order = orders[0];
-
-    // Fetch order items
-    order.items = await queryAsync(queries.getOrderItemsByOrderId, [id]);
-
-    // Fetch order status history
-    order.status_history = await queryAsync(queries.getOrderStatusHistory, [id]);
-
-    successResponse(res, { data: order, message: "Order retrieved successfully" });
-});
-
-
-// Update order status
-const updateOrderStatus = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { status, comment = '' } = req.body;
     
-    if (!status) throwError("Status is required", 400);
+    // Get order items with translations
+    // const orderItems = await queryAsync(queries.getOrderItemsWithTranslations, [orderId, languageCode]);
+    const orderItems = await queryAsync(queries.getOrderItemsWithTranslations, 
+        [languageCode, languageCode, orderId]);
     
-    // Valid statuses - these should match your application's status flow
-    const validStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED'];
+    // Get order status history
+    const statusHistory = await queryAsync(queries.getOrderStatusHistory, [orderId]);
     
-    if (!validStatuses.includes(status)) {
-        throwError(`Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
+    return {
+        order_id: orderInfo.order_id,
+        order_reference: `ORD-${orderInfo.order_id}`,
+        order_date: orderInfo.order_date,
+        order_status: orderInfo.order_status,
+        shipping_details: {
+            name: orderInfo.name,
+            mobile_no: orderInfo.mobile_no,
+            email: orderInfo.email,
+            shipping_address: orderInfo.shipping_address,
+            shipping_method: orderInfo.shipping_method
+        },
+        order_items: orderItems,
+        sub_total: orderInfo.sub_total,
+        discount: orderInfo.discount,
+        shipping_cost: orderInfo.shipping_cost,
+        tax: orderInfo.tax,
+        total: orderInfo.total,
+        payment_details: {
+            payment_method: orderInfo.payment_method,
+            transaction_id: orderInfo.transaction_id
+        },
+        coupon_code: orderInfo.coupon_code,
+        order_notes: orderInfo.order_notes,
+        status_history: statusHistory
+    };
+};
+
+// Get orders with pagination
+const getOrders = asyncHandler(async (req, res) => {
+    const { 
+        page = 1, 
+        limit = 10, 
+        status,
+        language_code = 'en' 
+    } = req.query;
+    
+    const offset = (page - 1) * limit;
+    
+    // Build the query conditions
+    let conditions = '';
+    const params = [];
+    
+    if (status) {
+        conditions = 'WHERE order_status = ?';
+        params.push(status);
     }
     
-    const orderCheck = await queryAsync(queries.getOrderById, [id]);
-    if (orderCheck.length === 0) throwError("Order not found", 404);
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) as total FROM orders ${conditions}`;
+    const [countResult] = await queryAsync(countQuery, params);
+    const totalOrders = countResult.total;
+    const totalPages = Math.ceil(totalOrders / limit);
     
-    const order = orderCheck[0];
+    // Get orders with pagination
+    const orders = await queryAsync(
+        queries.getOrdersWithPagination,
+        [...params, parseInt(limit), parseInt(offset)]
+    );
     
-    // Implement status transition validations if needed
-    // For example, you might not want to allow a DELIVERED order to go back to PENDING
-    
-    // Handling special case for CANCELLED status
-    if (status === 'CANCELLED' && order.status !== 'CANCELLED') {
-        // Restore inventory for cancelled orders
-        const orderItems = await queryAsync(queries.getOrderItemsBasic, [id]);
+    // Get detailed information for each order
+    const ordersWithDetails = [];
+    for (const order of orders) {
+        const orderItems = await queryAsync(
+            queries.getOrderItemsWithTranslations, 
+            [language_code, language_code, order.order_id]
+        );
+       
         
-        // Start transaction
-        await queryAsync('START TRANSACTION');
-        
-        try {
-            for (const item of orderItems) {
-                // Restore stock for each item
-                await queryAsync(queries.restoreProductStock, [
-                    item.quantity, 
-                    item.product_id, 
-                    item.unit_id
-                ]);
+        ordersWithDetails.push({
+            ...order,
+            order_items: orderItems
+        });
+    }
+    
+    successResponse(res, {
+        data: {
+            orders: ordersWithDetails,
+            pagination: {
+                total: totalOrders,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total_pages: totalPages
             }
-            
-            // Update order status
-            await queryAsync(queries.updateOrderStatus, [status, id]);
-            
-            // Add status history entry
-            await queryAsync(queries.addOrderStatusHistory, [id, status, comment]);
-            
-            // Commit transaction
-            await queryAsync('COMMIT');
-            
-        } catch (error) {
-            // Rollback in case of error
-            await queryAsync('ROLLBACK');
-            throw error;
-        }
-    } else {
-        // For normal status updates
-        await queryAsync(queries.updateOrderStatus, [status, id]);
-        await queryAsync(queries.addOrderStatusHistory, [id, status, comment]);
-    }
-    
-    successResponse(res, { message: "Order status updated successfully" });
+        },
+        message: "Orders retrieved successfully",
+        statusCode: 200
+    });
 });
 
 module.exports = {
     placeOrder,
-    getUserOrders,
-    getOrderById,
-    updateOrderStatus
+    getOrderDetails,
+    getOrders
 };

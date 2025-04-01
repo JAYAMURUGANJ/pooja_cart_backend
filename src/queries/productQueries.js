@@ -166,6 +166,14 @@ const deleteProductImage = `
     WHERE id = ? AND product_id = ?
 `;
 
+const getProductTranslation = `
+    SELECT 
+        pt.name,
+        pt.description
+    FROM product_translations pt
+    WHERE pt.language_code = ? AND pt.product_id = ?
+`;
+
 module.exports = {
     getAllProductsPaginated,
     getTotalProductCount,
@@ -188,5 +196,6 @@ module.exports = {
     insertProductImage,
     updateProductImage,
     deleteProductImage,
-    getPrimaryProductImage
+    getPrimaryProductImage,
+    getProductTranslation
 };
