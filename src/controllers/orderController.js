@@ -67,17 +67,19 @@ const placeOrder = asyncHandler(async (req, res) => {
             }
 
             // Calculate totals
-            const itemSubTotal = selling_price * quantity;
+            const itemSubTotal = mrp * quantity;
             const itemDiscount = (mrp - selling_price) * quantity;
             
             sub_total += itemSubTotal;
             total_discount += itemDiscount;
         }
 
-        // Calculate order totals
-        const shipping_cost = 7.99;
-        const tax = sub_total * 0.0925;
-        const total = sub_total + shipping_cost + tax - total_discount;
+           // Calculate order totals with toFixed(2)
+    const shipping_cost = 0;
+    const tax = (sub_total * 0).toFixed(2);
+    const total = (sub_total + shipping_cost + parseFloat(tax) - total_discount).toFixed(2);
+    sub_total = sub_total.toFixed(2);
+    total_discount = total_discount.toFixed(2);
 
         // Create the order
         const orderResult = await queryAsync(queries.createOrder, [
@@ -92,7 +94,7 @@ const placeOrder = asyncHandler(async (req, res) => {
             shipping_cost,
             tax,
             total,
-            'pending',
+            'processing',
             payment_details.payment_method,
             payment_details.transaction_id || null,
             coupon_code,
@@ -149,7 +151,7 @@ const placeOrder = asyncHandler(async (req, res) => {
         // Record order status history
         await queryAsync(queries.addOrderStatusHistory, [
             orderId, 
-            'pending', 
+            'processing', 
             'Order placed successfully'
         ]);
 
@@ -191,7 +193,7 @@ const getOrderDetails = async (orderId, languageCode = 'en') => {
     
     return {
         order_id: orderInfo.order_id,
-        order_reference: `ORD-${orderInfo.order_id}`,
+        order_reference: `ORD${orderInfo.order_id}`,
         order_date: orderInfo.order_date,
         order_status: orderInfo.order_status,
         shipping_details: {
@@ -279,8 +281,113 @@ const getOrders = asyncHandler(async (req, res) => {
     });
 });
 
+
+/// get orders by mobile no.
+
+const getOrdersByMobile = asyncHandler(async (req, res) => {
+    const { mobile_no, language_code = 'en' } = req.body;
+
+    if (!mobile_no) {
+        throwError("Missing mobile_no in request query", 400);
+    }
+
+    // Get orders for the given mobile number
+    const orders = await queryAsync(queries.getOrdersByMobile, [mobile_no]);
+
+    if (orders.length === 0) {
+        throwError("No orders found for the provided mobile number", 404);
+    }
+
+    // Get detailed information for each order
+    const ordersWithDetails = [];
+    for (const order of orders) {
+        const orderItems = await queryAsync(
+            queries.getOrderItemsWithTranslations, 
+            [language_code, language_code, order.order_id]
+        );
+        
+        const statusHistory = await queryAsync(queries.getOrderStatusHistory, [order.order_id]);
+        
+        ordersWithDetails.push({
+            ...order,
+            order_items: orderItems,
+            status_history: statusHistory
+        });
+    }
+
+    successResponse(res, {
+        data: ordersWithDetails,
+        message: "Orders retrieved successfully",
+        statusCode: 200
+    });
+});
+
+
+
+const getOrderByOrderId = asyncHandler(async (req, res) => {
+    const { order_id, language_code = 'en' } = req.body;
+
+    if (!order_id) {
+        throwError("Missing order id in request query", 400);
+    }
+    const numericOrderId = validateAndExtractOrderId(order_id);
+    // Get orders for the given order id
+    const orders = await queryAsync(queries.getOrderById, [numericOrderId]);
+
+    if (orders.length === 0) {
+        throwError("No orders found for the provided Order Id", 404);
+    }
+
+    // Get detailed information for each order
+    const ordersWithDetails = [];
+    for (const order of orders) {
+        const orderItems = await queryAsync(
+            queries.getOrderItemsWithTranslations, 
+            [language_code, language_code, order.order_id]
+        );
+        
+        const statusHistory = await queryAsync(queries.getOrderStatusHistory, [order.order_id]);
+        
+        ordersWithDetails.push({
+            ...order,
+            order_reference: `ORD${order.order_id}`,
+            order_items: orderItems,
+            status_history: statusHistory
+        });
+    }
+
+    successResponse(res, {
+        data: ordersWithDetails,
+        message: "Orders retrieved successfully",
+        statusCode: 200
+    });
+});
+
+function validateAndExtractOrderId(orderId) {
+    if (!orderId || typeof orderId !== 'string') {
+        throwError("Invalid order ID: Must be a string", 400);
+    }
+
+    // Case-insensitive check for 'ord' prefix
+    if (!/^ord/i.test(orderId)) {
+        throwError("Invalid order ID format: Must start with 'ord'", 400);
+    }
+
+    // Extract numeric part
+    const numericPart = orderId.substring(3);
+    const numericId = parseInt(numericPart, 10);
+
+    if (isNaN(numericId) || numericId <= 0) {
+        throwError("Invalid order ID: Must contain a positive number after 'ord'", 400);
+    }
+
+    return numericId;
+}
+
 module.exports = {
     placeOrder,
     getOrderDetails,
-    getOrders
+    getOrders,
+    getOrdersByMobile,
+    getOrderByOrderId,
 };

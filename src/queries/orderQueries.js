@@ -141,6 +141,29 @@ const updateOrderStatus = `
     WHERE id = ?
 `;
 
+const getOrdersByMobile= `
+ SELECT 
+        o.id as order_id, 
+        o.order_date, 
+        o.order_status, 
+        o.name, 
+        o.mobile_no, 
+        o.email, 
+        o.shipping_address, 
+        o.shipping_method, 
+        o.sub_total, 
+        o.discount, 
+        o.shipping_cost, 
+        o.tax, 
+        o.total, 
+        o.payment_method, 
+        o.transaction_id, 
+        o.coupon_code, 
+        o.order_notes 
+    FROM orders o 
+    WHERE o.mobile_no = ?
+`;
+
 // Product related queries
 const getProductById = `
     SELECT 
@@ -195,6 +218,7 @@ module.exports = {
     getOrderStatusHistory,
     getOrdersWithPagination,
     updateOrderStatus,
+    getOrdersByMobile,
     getProductTranslation,
     getProductById,
     getProductUnits
