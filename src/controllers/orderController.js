@@ -40,8 +40,8 @@ const placeOrder = asyncHandler(async (req, res) => {
 
         // Validate all products and calculate totals
         for (const item of order_items) {
-            const { product_id, unit_id, quantity, selling_price, mrp } = item;
-            if (!product_id || !unit_id || !quantity || !selling_price || !mrp) {
+            const { product_id, unit_id, quantity, selling_price, mrp, conversion_factor } = item;
+            if (!product_id || !unit_id || !quantity || !selling_price || !mrp || !conversion_factor) {
                 await queryAsync('ROLLBACK');
                 throwError("Missing order item details", 400);
             }
@@ -106,7 +106,7 @@ const placeOrder = asyncHandler(async (req, res) => {
         // Add all order items and update inventory
         for (const item of order_items) {
             // Add order item (without product name as it will be in translations)
-            const itemSubTotal = item.selling_price * item.quantity;
+            const itemSubTotal = item.mrp * item.quantity;
             const itemDiscount = (item.mrp - item.selling_price) * item.quantity;
             
             const orderItemResult = await queryAsync(queries.addOrderItem, [
@@ -117,7 +117,8 @@ const placeOrder = asyncHandler(async (req, res) => {
                 item.selling_price,
                 item.mrp,
                 itemSubTotal,
-                itemDiscount
+                itemDiscount,
+                item.conversion_factor,
             ]);
             
             const orderItemId = orderItemResult.insertId;

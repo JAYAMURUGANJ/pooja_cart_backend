@@ -29,8 +29,9 @@ const addOrderItem = `
         selling_price, 
         mrp, 
         item_sub_total, 
-        item_discount
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        item_discount,
+        conversion_factor
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)
 `;
 
 const addOrderedProductTranslation = `
@@ -96,6 +97,7 @@ const getOrderItemsWithTranslations = `
         oi.mrp,
         oi.item_sub_total,
         oi.item_discount,
+        oi.conversion_factor,
         opt.name as product_name,
         opt.description as product_description,
         ut.name as unit_name,
