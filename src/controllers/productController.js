@@ -121,12 +121,11 @@ const createProduct = asyncHandler(async (req, res) => {
     const productId = result.insertId;
 
     for (const { lang, name, description = '' } of translations) {
-
         await queryAsync(queries.insertProductTranslation, [productId, lang, name, description]);
     }
 
-    for (const { unit_id, conversion_factor = 1, mrp, selling_price, price_adjustment = 0, is_default = false, in_stock = 0 } of units) {
-        await queryAsync(queries.insertProductUnit, [productId, unit_id, conversion_factor, mrp, selling_price, price_adjustment, is_default, in_stock]);
+    for (const { unit_id, conversion_factor = 1, mrp, selling_price,  is_default = false, in_stock = 0 } of units) {
+        await queryAsync(queries.insertProductUnit, [productId, unit_id, conversion_factor, mrp, selling_price, is_default, in_stock]);
     }
 
     for (const { image_url, is_primary = false, display_order = 0 } of images) {
