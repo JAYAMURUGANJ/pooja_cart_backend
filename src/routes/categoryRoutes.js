@@ -8,8 +8,8 @@ const router = express.Router();
 // ✅ Get All Categories (Public)
 router.get("/", controller.getAllCategories);
 router.get("/:id", controller.getCategoryById);
-router.post('/',authMiddleware, controller.createCategory);
-router.put('/:id',authMiddleware, controller.updateCategory);
-router.delete('/:id',authMiddleware, controller.deleteCategory);
+router.post('/', controller.createCategory);
+router.put('/update', controller.updateCategory);
+router.delete('/delete', controller.deleteCategory);
 
 module.exports = router;

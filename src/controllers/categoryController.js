@@ -75,7 +75,7 @@ const createCategory = asyncHandler(async (req, res) => {
 
 // Update a Category
 const updateCategory = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.query;
     const { lang = "en" } = req.query; // Default language is English
     const { translations, unit_ids } = req.body;
 
@@ -110,7 +110,7 @@ const updateCategory = asyncHandler(async (req, res) => {
 
 // Delete a Category
 const deleteCategory = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.query;
 
     // Verify category exists
     const category = await queryAsync(queries.getCategoryById, ["en", id]);
