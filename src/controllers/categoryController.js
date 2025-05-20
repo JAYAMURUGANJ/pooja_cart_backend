@@ -130,7 +130,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
          message: "Category deleted successfully" });
 });
 
-module.exports = { 
+module.exports = {
     getAllCategories,
     getCategoryById,
     createCategory, 

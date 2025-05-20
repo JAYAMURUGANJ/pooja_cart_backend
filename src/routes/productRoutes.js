@@ -10,8 +10,8 @@ const router = express.Router();
 router.get('/', controller.getAllProducts);
 router.get('/:id',  controller.getProductById);
 router.post('/', upload.array('images', 5), compressImages, controller.createProduct);
-router.put('/:id',authMiddleware, controller.updateProduct);
-router.delete('/:id',authMiddleware, controller.deleteProduct);
+router.put('/:id', controller.updateProduct);
+router.delete('/:id', controller.deleteProduct);
 
 
 module.exports = router;
