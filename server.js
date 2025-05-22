@@ -16,6 +16,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // serve image files
 
 // Import Routes
+const dashboardRoutes = require("./src/routes/dashboardRoutes"); 
 const userRoutes = require("./src/routes/userRoutes"); // ✅ Updated
 const itemRoutes = require("./src/routes/itemRoutes");
 const functionRoutes = require("./src/routes/functionRoutes");
@@ -24,6 +25,7 @@ const unitRoutes = require("./src/routes/unitRoutes");
 const productsRoutes = require("./src/routes/productRoutes");
 const orderRoutes = require("./src/routes/orderRoutes");
 
+app.use("/dashboard", dashboardRoutes);
 app.use("/users", userRoutes); // ✅ Updated path
 app.use("/items", itemRoutes);
 app.use("/functions", functionRoutes);
