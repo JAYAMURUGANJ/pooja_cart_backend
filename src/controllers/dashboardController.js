@@ -8,13 +8,27 @@ const { throwError } = require("../utils/errorHandler");
 const getDashboardContent = asyncHandler(async (req, res) => {
     try {
         const { lang = "en" } = req.query;
-        const dashboartContent = await queryAsync(queries.getDashboardContent, [lang]);
+        const threshold = 5;
+const page = parseInt(req.query.page || '0');
+const limit = parseInt(req.query.limit || '10');
+const offset = page * limit;
+
+const [dashboartContent, lowStockRows] = await Promise.all([
+  await queryAsync(queries.getDashboardContent, [lang]),
+//   await queryAsync(queries.getLowStockProducts,  [threshold, limit, offset])
+]);
+
+
+       
 
         var data = dashboartContent[0];
 
         if (!data) {
             return throwError("No data found", 404);
         }
+
+
+
         const response = {
             timestamp: new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}),
             admin_user: {
@@ -27,7 +41,7 @@ const getDashboardContent = asyncHandler(async (req, res) => {
             },
             store: {
                 store_id: "store_001",
-                store_name: "UrbanCart"
+                store_name: "Palani store"
             },
             metrics: {
                 today_orders: data.today_orders,

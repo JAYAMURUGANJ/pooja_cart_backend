@@ -6,7 +6,8 @@ SELECT
   today.today_revenue,
   products.total_products,
   products.active_products,
-  products.inactive_products
+  products.inactive_products,
+  products.out_of_stock_products
 FROM
   (SELECT SUM(total) AS total_revenue, COUNT(*) AS total_orders FROM orders) AS metrics,
   (SELECT COUNT(*) AS today_orders, SUM(total) AS today_revenue FROM orders WHERE DATE(order_date) = CURDATE()) AS today,
@@ -22,6 +23,20 @@ FROM
   ) AS products
 `;
 
+const getLowStockProducts = `
+SELECT 
+  p.id AS product_id,
+  p.name AS product_name,
+  SUM(pu.in_stock) AS total_stock
+FROM products p
+JOIN product_units pu ON pu.product_id = p.id
+GROUP BY p.id, p.name
+HAVING total_stock <= ?
+ORDER BY total_stock ASC
+LIMIT ? OFFSET ?;
+`;
+
 module.exports = {
-    getDashboardContent
+    getDashboardContent,
+    getLowStockProducts
 };
