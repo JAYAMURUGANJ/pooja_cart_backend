@@ -26,17 +26,52 @@ FROM
 const getLowStockProducts = `
 SELECT 
   p.id AS product_id,
-  p.name AS product_name,
-  SUM(pu.in_stock) AS total_stock
+  pt.name AS product_name,
+  SUM(pu.in_stock) AS in_stock
 FROM products p
 JOIN product_units pu ON pu.product_id = p.id
-GROUP BY p.id, p.name
-HAVING total_stock <= ?
-ORDER BY total_stock ASC
+JOIN product_translations pt ON pt.product_id = p.id
+WHERE pt.language_code = ?
+GROUP BY p.id, pt.name
+HAVING in_stock <= ?
+ORDER BY in_stock ASC
 LIMIT ? OFFSET ?;
 `;
 
+const getTopSellingProducts = `
+SELECT 
+  p.id AS product_id,
+  pt.name AS product_name,
+  SUM(oi.quantity) AS total_sold
+FROM order_items oi
+JOIN products p ON p.id = oi.product_id
+JOIN product_translations pt ON pt.product_id = p.id
+WHERE pt.language_code = ?
+GROUP BY p.id, pt.name
+ORDER BY total_sold DESC
+LIMIT ? OFFSET ?;
+`;
+
+const getRecentOrders = `
+SELECT 
+  o.id AS order_id,
+  o.name AS customer_name,
+  o.mobile_no,
+  o.email,
+  o.total AS order_total,
+  o.order_status,
+  o.payment_method,
+  o.order_date
+FROM orders o
+ORDER BY o.order_date DESC
+LIMIT ? OFFSET ?;
+`;
+
+
+
 module.exports = {
     getDashboardContent,
-    getLowStockProducts
+    getLowStockProducts,
+    getTopSellingProducts,
+    getRecentOrders
 };

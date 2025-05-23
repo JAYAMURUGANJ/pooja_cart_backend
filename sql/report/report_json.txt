@@ -1,0 +1,81 @@
+// dummy data for testing
+{
+  "filters": {
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-22",
+    "language_code": "en",
+    "limit": 10,
+    "offset": 0
+  },
+  "summary": {
+    "total_orders": 120,
+    "total_revenue": 35840.50,
+    "average_order_value": 298.67,
+    "total_customers": 92
+  },
+  "charts": {
+    "sales_by_date": [
+      {
+        "date": "2025-05-01",
+        "total_orders": 8,
+        "total_revenue": 2120.00
+      },
+      {
+        "date": "2025-05-02",
+        "total_orders": 10,
+        "total_revenue": 3125.25
+      }
+    ],
+    "order_status_summary": [
+      {
+        "status": "Delivered",
+        "count": 72
+      },
+      {
+        "status": "Pending",
+        "count": 28
+      },
+      {
+        "status": "Cancelled",
+        "count": 20
+      }
+    ],
+    "payment_method_summary": [
+      {
+        "payment_method": "Cash",
+        "order_count": 56,
+        "revenue": 15870.25
+      },
+      {
+        "payment_method": "Card",
+        "order_count": 44,
+        "revenue": 13420.00
+      },
+      {
+        "payment_method": "UPI",
+        "order_count": 20,
+        "revenue": 6560.25
+      }
+    ]
+  },
+  "top_products": [
+    {
+      "product_id": 101,
+      "product_name": "Veg Pizza",
+      "quantity_sold": 128,
+      "revenue": 15240.00
+    },
+    {
+      "product_id": 104,
+      "product_name": "Cheese Burger",
+      "quantity_sold": 96,
+      "revenue": 10480.50
+    },
+    {
+      "product_id": 112,
+      "product_name": "Cold Coffee",
+      "quantity_sold": 78,
+      "revenue": 5620.00
+    }
+  ]
+}

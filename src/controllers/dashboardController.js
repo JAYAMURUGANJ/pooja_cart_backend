@@ -8,26 +8,35 @@ const { throwError } = require("../utils/errorHandler");
 const getDashboardContent = asyncHandler(async (req, res) => {
     try {
         const { lang = "en" } = req.query;
+
+        // low stock products limits
         const threshold = 5;
-const page = parseInt(req.query.page || '0');
-const limit = parseInt(req.query.limit || '10');
-const offset = page * limit;
+        const page = parseInt(req.query.page || '0');
+        const limit = parseInt(req.query.limit || '5');
+        const offset = page * limit;
 
-const [dashboartContent, lowStockRows] = await Promise.all([
-  await queryAsync(queries.getDashboardContent, [lang]),
-//   await queryAsync(queries.getLowStockProducts,  [threshold, limit, offset])
-]);
+        // top  selling products limits
+        const topPage = parseInt(req.query.top_page || '0');
+        const topLimit = parseInt(req.query.top_limit || '5');
+        const topOffset = topPage * topLimit;
 
+        // recent orders limits
+        const recentPage = parseInt(req.query.recent_orders_page || '0');
+        const recentLimit = parseInt(req.query.recent_orders_limit || '5');
+        const recentOffset = recentPage * recentLimit;
 
-       
+        const [dashboardContent, lowStockRows, topSellingRows, recentOrders] = await Promise.all([
+            await queryAsync(queries.getDashboardContent, [lang]),
+            await queryAsync(queries.getLowStockProducts, [lang, threshold, limit, offset]),
+            await queryAsync(queries.getTopSellingProducts, [lang, topLimit, topOffset]),
+            await queryAsync(queries.getRecentOrders, [recentLimit, recentOffset]),
+        ]);
 
-        var data = dashboartContent[0];
+        var data = dashboardContent[0];
 
         if (!data) {
             return throwError("No data found", 404);
         }
-
-
 
         const response = {
             timestamp: new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}),
@@ -54,49 +63,10 @@ const [dashboartContent, lowStockRows] = await Promise.all([
                 active_products: data.active_products,
                 inactive_products: data.inactive_products,
                 out_of_stock: data.out_of_stock_products,
-                low_stock: [
-                    {
-                        product_id: "prod_0023",
-                        product_name: "Wireless Mouse",
-                        stock: 3
-                    },
-                    {
-                        product_id: "prod_0091",
-                        product_name: "Bluetooth Speaker",
-                        stock: 5
-                    }
-                ],
-                top_selling: [
-                    {
-                        product_id: "prod_0001",
-                        product_name: "USB-C Charger",
-                        units_sold: 420,
-                        revenue: 6300.00
-                    },
-                    {
-                        product_id: "prod_0004",
-                        product_name: "Laptop Stand",
-                        units_sold: 390,
-                        revenue: 11700.00
-                    }
-                ]
+                low_stock: lowStockRows,
+                top_selling: topSellingRows
             },
-            recent_orders: [
-                {
-                    order_id: "order_001",
-                    customer_name: "John Doe",
-                    order_date: "2023-10-01",
-                    total_amount: 100.00,
-                    status: "Delivered"
-                },
-                {
-                    order_id: "order_002",
-                    customer_name: "Jane Smith",
-                    order_date: "2023-10-02",
-                    total_amount: 50.00,
-                    status: "Pending"
-                }
-            ],
+            recent_orders: recentOrders,
 
         };
 

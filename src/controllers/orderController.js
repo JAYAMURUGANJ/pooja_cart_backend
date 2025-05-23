@@ -255,13 +255,11 @@ const getOrders = asyncHandler(async (req, res) => {
     // Get detailed information for each order
     const ordersWithDetails = [];
     for (const order of orders) {
-        console.log(order.order_id);
+      
         const orderItems = await queryAsync(
             queries.getOrderItemsWithTranslations, 
             [language_code, language_code, order.order_id]
-        );
-            console.log(language_code);
-       
+        );      
         
         ordersWithDetails.push({
             ...order,
