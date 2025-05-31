@@ -69,7 +69,6 @@ const getDashboardContent = asyncHandler(async (req, res) => {
             recent_orders: recentOrders,
 
         };
-
         successResponse(res, { data: response, message: "Dashboard loaded Successfully" });
     } catch (error) {
         console.error("Database Query Error:", error);
