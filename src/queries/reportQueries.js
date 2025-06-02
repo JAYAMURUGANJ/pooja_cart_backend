@@ -1,21 +1,75 @@
-// -- 1. Summary
- const getReportSummary = `SELECT 
-  COUNT(*) AS total_orders,
-  SUM(grand_total) AS total_revenue,
-  AVG(grand_total) AS average_order_value,
-  COUNT(DISTINCT customer_name) AS total_customers
-FROM orders
-WHERE order_time BETWEEN ? AND ?`;
+// -- 1. Summary query
+  const getTodayReportSummary = `SELECT
+    COUNT(*) AS total_orders,
+    SUM(total) AS total_revenue,
+    AVG(total) AS average_order_value,
+    COUNT(DISTINCT mobile_no) AS total_customers
+  FROM orders
+  WHERE order_date = CURDATE()`;
 
-// -- 2. Sales by Date
- const getSaleByDate =  `SELECT 
-  DATE(order_time) AS date,
-  COUNT(*) AS total_orders,
-  SUM(grand_total) AS total_revenue
-FROM orders
-WHERE order_time BETWEEN ? AND ?
-GROUP BY DATE(order_time)
-ORDER BY date`;
+ const  getMonthlyReportSummary =  `SELECT
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+    COUNT(*) AS total_orders,
+    SUM(total) AS total_revenue,
+    AVG(total) AS average_order_value,
+    COUNT(DISTINCT mobile_no) AS total_customers
+   FROM orders
+   WHERE YEAR(order_date) = YEAR(CURDATE())
+  AND MONTH(order_date) = MONTH(CURDATE())
+   GROUP BY month
+   ORDER BY month;`;
+
+  const getReportSummaryByDate = `SELECT
+    COUNT(*) AS total_orders,
+    SUM(total) AS total_revenue,
+    AVG(total) AS average_order_value,
+    COUNT(DISTINCT mobile_no) AS total_customers
+  FROM orders
+  WHERE DATE(order_date) BETWEEN ? AND ?`;
+
+   const  getOverallReportSummary = 
+   `SELECT
+    COUNT(*) AS total_orders,
+    SUM(total) AS total_revenue,
+    AVG(total) AS average_order_value,
+    COUNT(DISTINCT mobile_no) AS total_customers
+    FROM orders`;
+
+    // -- 2. Sales queries
+
+  const getTodaySale =  `SELECT 
+       DATE(order_date) AS date,
+       COUNT(*) AS total_orders,
+       SUM(total) AS total_revenue
+       FROM orders
+       WHERE order_date = CURDATE()`;
+  const getMonthlySale =  `SELECT 
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+       DATE(order_date) AS date,
+       COUNT(*) AS total_orders,
+       SUM(total) AS total_revenue
+        FROM orders
+       WHERE YEAR(order_date) = YEAR(CURDATE())
+      AND MONTH(order_date) = MONTH(CURDATE())
+       GROUP BY month
+       ORDER BY month;`;
+  const getSaleByDate =  `SELECT 
+       DATE(order_date) AS date,
+       COUNT(*) AS total_orders,
+       SUM(total) AS total_revenue
+       FROM orders
+        WHERE order_date BETWEEN ? AND ?
+        GROUP BY DATE(order_date)
+        ORDER BY date`;
+  const getOverallSale =  `SELECT 
+       DATE(order_date) AS date,
+       COUNT(*) AS total_orders,
+       SUM(total) AS total_revenue
+       FROM orders`;
+
+
+
+
 
 // -- 3. Order Status Summary
 const getOrderStatusSummary =  `SELECT 
@@ -52,8 +106,17 @@ LIMIT ? OFFSET ?`;
 
 
 module.exports = {
-  getReportSummary,
+  getTodayReportSummary,
+  getMonthlyReportSummary,
+  getReportSummaryByDate,
+  getOverallReportSummary,
+  //sale
+  getTodaySale,
+  getMonthlySale,
   getSaleByDate,
+  getOverallSale,
+
+
   getOrderStatusSummary,
   getPaymentMethodSummary,
   getTopProducts

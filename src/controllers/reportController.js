@@ -9,6 +9,7 @@ const getReportContent = asyncHandler(async (req, res) => {
     ////
     try {
 const {
+      report_type,
       start_date,
       end_date,
       limit = 10,
@@ -16,9 +17,62 @@ const {
       language_code = 'en'
     } = req.query;
 
+    let summaryQuery = queries.getTodayReportSummary;
+    let getSalesQuery = queries.getTodaySale;
+    //params
+    let summaryParams = [];
+    let getSalesParams = [];
+    
+
+    switch (report_type) {
+    case 'T':
+      //queries
+      summaryQuery = queries.getTodayReportSummary;
+      
+      //params
+      getSalesQuery = queries.getTodaySale;
+    break;
+    case 'M':
+      //queries
+      summaryQuery = queries.getMonthlyReportSummary;
+
+      // params
+      getSalesQuery = queries.getMonthlySale;
+      break;
+    case 'A':
+      //queries
+      summaryQuery = queries.getOverallReportSummary;
+
+      //params
+      getSalesQuery = queries.getOverallSale;
+      break;
+    case 'R': 
+     if (start_date === null || start_date === undefined) {
+        throw new Error("start_date cannot be null or undefined. A valid start date is required.");
+    }
+    if (end_date === null || end_date === undefined) {
+        throw new new Error("end_date cannot be null or undefined. A valid end date is required.");
+    }
+
+    // queries
+      summaryQuery = queries.getReportSummaryByDate;
+      getSalesQuery = queries.getSaleByDate;
+
+      // params
+      summaryParams = [start_date, end_date];
+      getSalesParams = [start_date, end_date];
+      break;
+    default:
+      summaryQuery = queries.getOverallReportSummary;
+      getSalesQuery = queries.getTodaySale;
+      
+      break;
+  }
+
+
     const [summary, salesByDate, orderStatusSummary, paymentMethodSummary,topProducts] = await Promise.all([
-            await queryAsync(queries.getReportSummary, [start_date, end_date]),
-            // await queryAsync(queries.getSaleByDate, [start_date, end_date]),
+            await queryAsync(summaryQuery, summaryParams),
+            await queryAsync(getSalesQuery, getSalesParams),
             // await queryAsync(queries.getOrderStatusSummary,    [start_date, end_date]),
             // await queryAsync(queries.getPaymentMethodSummary,[start_date, end_date]),
             // await queryAsync(queries.getTopProducts,  [start_date, end_date, parseInt(limit), parseInt(offset)]),
