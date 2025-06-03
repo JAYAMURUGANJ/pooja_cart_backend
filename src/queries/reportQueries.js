@@ -43,6 +43,7 @@
        SUM(total) AS total_revenue
        FROM orders
        WHERE order_date = CURDATE()`;
+
   const getMonthlySale =  `SELECT 
     DATE_FORMAT(order_date, '%Y-%m') AS month,
        DATE(order_date) AS date,
@@ -53,6 +54,7 @@
       AND MONTH(order_date) = MONTH(CURDATE())
        GROUP BY month
        ORDER BY month;`;
+
   const getSaleByDate =  `SELECT 
        DATE(order_date) AS date,
        COUNT(*) AS total_orders,
@@ -61,6 +63,7 @@
         WHERE order_date BETWEEN ? AND ?
         GROUP BY DATE(order_date)
         ORDER BY date`;
+
   const getOverallSale =  `SELECT 
        DATE(order_date) AS date,
        COUNT(*) AS total_orders,
@@ -68,16 +71,35 @@
        FROM orders`;
 
 
-
-
-
 // -- 3. Order Status Summary
-const getOrderStatusSummary =  `SELECT 
+const getTodayOrderStatus =  `SELECT 
   order_status AS status,
   COUNT(*) AS count
 FROM orders
-WHERE order_time BETWEEN ? AND ?
-GROUP BY order_status`;
+WHERE order_date = CURDATE()`;
+
+const getMonthlyOrderStatus =  `SELECT 
+ DATE_FORMAT(order_date, '%Y-%m') AS month,
+  order_status AS status,
+  COUNT(*) AS count
+ FROM orders
+ WHERE YEAR(order_date) = YEAR(CURDATE())
+      AND MONTH(order_date) = MONTH(CURDATE())
+       GROUP BY month
+       ORDER BY month`;
+
+const getOrderStatusByDate =  `SELECT 
+  order_status AS status,
+  COUNT(*) AS count
+FROM orders
+ WHERE order_date BETWEEN ? AND ?
+        GROUP BY DATE(order_date)
+        ORDER BY order_date`;
+
+const getOverallOrderStatus =  `SELECT 
+  order_status AS status,
+  COUNT(*) AS count
+FROM orders`;
 
 // -- 4. Payment Method Summary
  const getPaymentMethodSummary =   `SELECT 
@@ -115,9 +137,12 @@ module.exports = {
   getMonthlySale,
   getSaleByDate,
   getOverallSale,
+  // order status
+  getTodayOrderStatus,
+  getMonthlyOrderStatus,
+  getOrderStatusByDate,
+  getOverallOrderStatus,
 
-
-  getOrderStatusSummary,
   getPaymentMethodSummary,
   getTopProducts
 };
