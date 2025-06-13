@@ -76,7 +76,8 @@ const getTodayOrderStatus =  `SELECT
   order_status AS status,
   COUNT(*) AS count
 FROM orders
-WHERE order_date = CURDATE()`;
+WHERE order_date = CURDATE()
+GROUP BY order_status`;
 
 const getMonthlyOrderStatus =  `SELECT 
  DATE_FORMAT(order_date, '%Y-%m') AS month,
@@ -85,7 +86,7 @@ const getMonthlyOrderStatus =  `SELECT
  FROM orders
  WHERE YEAR(order_date) = YEAR(CURDATE())
       AND MONTH(order_date) = MONTH(CURDATE())
-       GROUP BY month
+       GROUP BY order_status
        ORDER BY month`;
 
 const getOrderStatusByDate =  `SELECT 
@@ -93,13 +94,14 @@ const getOrderStatusByDate =  `SELECT
   COUNT(*) AS count
 FROM orders
  WHERE order_date BETWEEN ? AND ?
-        GROUP BY DATE(order_date)
+        GROUP BY order_status
         ORDER BY order_date`;
 
 const getOverallOrderStatus =  `SELECT 
   order_status AS status,
   COUNT(*) AS count
-FROM orders`;
+FROM orders
+GROUP BY order_status`;
 
 // -- 4. Payment Method Summary
  const getPaymentMethodSummary =   `SELECT 
